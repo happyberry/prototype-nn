@@ -12,9 +12,8 @@ class PrototypeLayer(tf.keras.layers.Layer):
 
     def call(self, inputs):
         prototypes = tf.expand_dims(self.prototypes, 0)
-        ins = tf.expand_dims(inputs, 1)
-        kek = prototypes - ins
-        distance_matrix = tf.math.square(tf.norm(kek, axis=-1)) # axis 0 - batch, axis 1 - prototypes
+        inputs = tf.expand_dims(inputs, 1)
+        distance_matrix = tf.math.square(tf.norm(prototypes - inputs, axis=-1))  # axis 0 - batch, axis 1 - prototypes
         r1 = tf.math.reduce_mean(tf.math.reduce_min(distance_matrix, axis=0))
         r2 = tf.math.reduce_mean(tf.math.reduce_min(distance_matrix, axis=1))
         return distance_matrix, r1, r2
