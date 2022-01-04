@@ -1,0 +1,2 @@
+model_checkpoint_path: "/notebooks/PrototypeDL/saved_model/mnist_model/mnist_cae_1/mnist_cae-99"
+all_model_checkpoint_paths: "/notebooks/PrototypeDL/saved_model/mnist_model/mnist_cae_1/mnist_cae-99"
