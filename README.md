@@ -4,9 +4,9 @@
 
 ### Minimal requirements
 
-* Sadly, we didn't get any response from owners of `Cars` dataset, so we switched to [`Rock, Paper, Scissors`](https://www.tensorflow.org/datasets/catalog/rock_paper_scissors) dataset resized to 64x64 shape (to make it similar to `Cars`)
+* Sadly, we didn't get any response from owners of `Cars` dataset, so (as planned) we switched to [`Rock, Paper, Scissors`](https://www.tensorflow.org/datasets/catalog/rock_paper_scissors) dataset resized to 64x64 shape (to make it similar to `Cars`)
 * All three datasets are available on [Tensorflow Datasets](https://www.tensorflow.org/datasets/). Code used to download the datasets is available [here](https://github.com/happyberry/prototype-nn/blob/main/src/data/dataset_loader.py#L8). 
-* Also, we ran the code shared by the paper authors on MNIST dataset. As authors' code is compatible with Tensorflow 1.2, we used [docker image](https://hub.docker.com/layers/tensorflow/tensorflow/1.2.1-py3/images/sha256-04d55504c9985152ba62c7ce1e208a212a98bd0debbd34888b65e556f8a37b65?context=explore) to run the code. To save time and energy, we ran the code for 100 epochs instead of 1500 proposed by authors. Results of the experiment with authors' code are available [here](https://github.com/happyberry/prototype-nn/tree/main/authors_code_results).
+* Also, we executed the code shared by the paper authors on MNIST dataset. As authors' code is compatible with Tensorflow 1.2, we used [docker image](https://hub.docker.com/layers/tensorflow/tensorflow/1.2.1-py3/images/sha256-04d55504c9985152ba62c7ce1e208a212a98bd0debbd34888b65e556f8a37b65?context=explore) to run the code. To save time and energy, we ran the training for 100 epochs instead of 1500 proposed by authors as results were satysfying by this point. Results of the experiment with authors' code are available [here](https://github.com/happyberry/prototype-nn/tree/main/authors_code_results).
 
 ### Implementation progress
 
