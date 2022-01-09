@@ -26,10 +26,9 @@ class RpsExperiment(BaseExperiment):
 
 
 def main():
-    experiment = RpsExperiment(False, batch_size=64, number_of_epochs=20, number_of_prototypes=5,
+    experiment = RpsExperiment(True, batch_size=64, number_of_epochs=20, number_of_prototypes=5,
                                  disable_r1=False, disable_r2=False)
     experiment.run()
-    experiment.decode_sample_images()
     sample = next(iter(experiment.train_ds.take(1)))[:]
     display_image(sample[0][0].numpy())
     display_image(transform_tf(sample[0][0], sample[1][0])[0].numpy())

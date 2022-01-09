@@ -1,4 +1,5 @@
 import os
+import sys
 
 from experiments.base_experiment import BaseExperiment
 import tensorflow as tf
@@ -43,10 +44,9 @@ class MnistExperiment(BaseExperiment):
 
 
 def main():
-    experiment = MnistExperiment(load_model=False, number_of_epochs=5, number_of_prototypes=15, disable_r1=False,
-                                 disable_r2=False, use_classic_model=False, ablate=True, dataset_name="FashionMNIST")
+    experiment = MnistExperiment(load_model=True, number_of_epochs=5, number_of_prototypes=10, disable_r1=False,
+                                 disable_r2=False, use_classic_model=False, ablate=False, dataset_name="MNIST")
     experiment.run()
-    experiment.decode_sample_images()
     img = next(iter(experiment.train_ds.take(1)))[0][:1]
     display_image(img[0])
     display_image(transform_tf(img, tf.constant([0]))[0])

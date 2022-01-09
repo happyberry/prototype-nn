@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 import tensorflow.keras as keras
 
+from src.data.dataset_loader import load_class_labels
 from src.utils.image_utils import *
 
 
@@ -24,6 +25,7 @@ class BaseExperiment(ABC):
         self.test_acc_metric = keras.metrics.SparseCategoricalAccuracy()
         self.use_interpretable_model = not use_classic_model and not ablate
         self.load_model = load_model
+        self.class_labels = load_class_labels(self.dataset_name)
 
     @abstractmethod
     def init_datasets(self):
@@ -53,22 +55,25 @@ class BaseExperiment(ABC):
         test_acc_metric = keras.metrics.SparseCategoricalAccuracy()
         for x_batch_val, y_batch_val in self.test_ds:
             self.model.test_step(x_batch_val, y_batch_val, test_acc_metric)
-        print(f"Test accuracy: {100 * float(test_acc_metric.result()):.2f}%")
+        print(f"Test accuracy: {100 * float(test_acc_metric.result()):.2f}%\n")
 
     def load_model_weights(self):
         self.model.load_weights(f"results/{self.dataset_name}/model")
 
     def display_results(self):
+        self.decode_sample_images()
         desired_width = desired_height = int((self.model.prototype_layer.prototypes.shape[-1] / 10) ** 0.5)
         desired_shape = (self.number_of_prototypes, desired_height, desired_width, 10)
         decoded = self.model.autoencoder.decoder(tf.reshape(self.model.prototype_layer.prototypes, desired_shape))
         weights = self.model.classification_layer.weights[0].numpy()
-        print(weights)
-        display_image(concatenate_images(pad_images(decoded)), "Zdekodowane prototypy wyuczone przez model")
-        print(tf.math.argmin(self.model.classification_layer.weights[0], axis=1))
+        print(f"Prototype layer weights:\n{weights}\n")
+        display_image(concatenate_images(pad_images(decoded)), "Decoded learnt prototypes")
+        print("Classes closest to prototypes:")
+        print(f"{self.class_labels[tf.math.argmin(self.model.classification_layer.weights[0], axis=1).numpy()]}\n")
         sample_test_image = next(iter(self.test_ds.take(1)))[0][:1]
         display_image(sample_test_image[0], "Sample test image")
-        print(self.model.compute_distances_to_prototypes(self.model.autoencoder.encoder(sample_test_image[:1])[1])[0])
+        print("Sample test image distance to each of the prototypes:")
+        print(self.model.compute_distances_to_prototypes(self.model.autoencoder.encoder(sample_test_image[:1])[1])[0].numpy())
 
     def decode_sample_images(self, number_of_images=10):
         image_batch = next(iter(self.train_ds.take(1)))[0]
@@ -82,6 +87,8 @@ class BaseExperiment(ABC):
         display_image(concatenate_images(pad_images(imgs[:number_of_images])), "Przykładowe obrazy ze zbioru treningowego")
 
     def run(self):
+        np.set_printoptions(precision=2)
+        np.set_printoptions(suppress=True)
         if self.load_model:
             try:
                 self.load_model_weights()
