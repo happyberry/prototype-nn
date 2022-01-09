@@ -12,8 +12,8 @@ class RpsExperiment(BaseExperiment):
                  disable_r1=False, disable_r2=False, dataset_name="RockPaperScissors"):
         self.dataset_name = dataset_name
         self.number_of_classes = 3
-        self.model = ProtoNet(RpsAutoencoder(), number_of_prototypes, self.number_of_classes)
-        super().__init__(batch_size, number_of_prototypes, number_of_epochs, disable_r1, disable_r2, load_model)
+        self.model = ProtoNet(RpsAutoencoder(), number_of_prototypes, self.number_of_classes, disable_r1, disable_r2)
+        super().__init__(batch_size, number_of_prototypes, number_of_epochs, load_model=load_model)
 
     def init_datasets(self):
         train_dataset, val_dataset, test_dataset = load_tf_data(self.dataset_name, "train[:2300]"), \
@@ -26,12 +26,11 @@ class RpsExperiment(BaseExperiment):
 
 
 def main():
-    experiment = RpsExperiment(True, batch_size=64, number_of_epochs=200, number_of_prototypes=5,
+    experiment = RpsExperiment(False, batch_size=64, number_of_epochs=20, number_of_prototypes=5,
                                  disable_r1=False, disable_r2=False)
     experiment.run()
     experiment.decode_sample_images()
     sample = next(iter(experiment.train_ds.take(1)))[:]
-    print(sample[0].shape)
     display_image(sample[0][0].numpy())
     display_image(transform_tf(sample[0][0], sample[1][0])[0].numpy())
 

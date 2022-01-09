@@ -2,11 +2,8 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 
-import tensorflow as tf
-from matplotlib import pyplot as plt
 import tensorflow.keras as keras
 
-from src.losses.prototype_network_loss import PrototypeNetworkLoss
 from src.utils.image_utils import *
 
 
@@ -15,39 +12,22 @@ class BaseExperiment(ABC):
     number_of_classes: int
     dataset_name: str
 
-    def __init__(self, batch_size: int, number_of_prototypes: int, number_of_epochs: int,
-                 disable_r1: bool, disable_r2: bool, load_model=True):
+    def __init__(self, batch_size: int, number_of_prototypes: int, number_of_epochs: int, use_classic_model=False,
+                 ablate=False, load_model=True):
         self.batch_size = batch_size
         self.number_of_prototypes = number_of_prototypes
         self.number_of_epochs = number_of_epochs
         self.train_ds, self.val_ds, self.test_ds = self.init_datasets()
 
-        self.prototype_loss = PrototypeNetworkLoss(disable_r1=disable_r1, disable_r2=disable_r2)
-        self.optimizer = keras.optimizers.Adam(learning_rate=0.002)
-
         self.train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
         self.val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
         self.test_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+        self.use_interpretable_model = not use_classic_model and not ablate
         self.load_model = load_model
 
     @abstractmethod
     def init_datasets(self):
         pass
-
-    @tf.function
-    def train_step(self, x: tf.Tensor, y: tf.Tensor):
-        with tf.GradientTape() as tape:
-            logits, reconstruction, r1, r2 = self.model(x, training=True)
-            loss_value = self.prototype_loss((y, x), (logits, reconstruction, r1, r2))
-        grads = tape.gradient(loss_value, self.model.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.model.trainable_weights))
-        self.train_acc_metric.update_state(y, logits)
-        return loss_value
-
-    @tf.function
-    def test_step(self, x: tf.Tensor, y: tf.Tensor, metric: keras.metrics.Metric):
-        logits, _, _, _ = self.model(x, training=False)
-        metric.update_state(y, logits)
 
     def train_model(self, show_epoch_time=True):
         for epoch in range(self.number_of_epochs):
@@ -58,10 +38,10 @@ class BaseExperiment(ABC):
             losses = []
             print("\nEpoch %d" % (epoch,))
             for step, (x_batch_train, y_batch_train) in enumerate(self.train_ds):
-                losses.append(self.train_step(x_batch_train, y_batch_train))
+                losses.append(self.model.train_step(x_batch_train, y_batch_train, self.train_acc_metric))
             epoch_loss = sum(losses) / len(losses)
             for x_batch_val, y_batch_val in self.val_ds:
-                self.test_step(x_batch_val, y_batch_val, self.val_acc_metric)
+                self.model.test_step(x_batch_val, y_batch_val, self.val_acc_metric)
             train_acc, val_acc = self.train_acc_metric.result(), self.val_acc_metric.result()
             print(f"Train loss: {epoch_loss:.4f} | Train accuracy: {100 * float(train_acc):.2f}% | Validation accuracy: {100 * float(val_acc):.2f}%")
             self.train_acc_metric.reset_states()
@@ -72,7 +52,7 @@ class BaseExperiment(ABC):
     def test_model(self):
         test_acc_metric = keras.metrics.SparseCategoricalAccuracy()
         for x_batch_val, y_batch_val in self.test_ds:
-            self.test_step(x_batch_val, y_batch_val, test_acc_metric)
+            self.model.test_step(x_batch_val, y_batch_val, test_acc_metric)
         print(f"Test accuracy: {100 * float(test_acc_metric.result()):.2f}%")
 
     def load_model_weights(self):
@@ -86,6 +66,9 @@ class BaseExperiment(ABC):
         print(weights)
         display_image(concatenate_images(pad_images(decoded)), "Zdekodowane prototypy wyuczone przez model")
         print(tf.math.argmin(self.model.classification_layer.weights[0], axis=1))
+        sample_test_image = next(iter(self.test_ds.take(1)))[0][:1]
+        display_image(sample_test_image[0], "Sample test image")
+        print(self.model.compute_distances_to_prototypes(self.model.autoencoder.encoder(sample_test_image[:1])[1])[0])
 
     def decode_sample_images(self, number_of_images=10):
         image_batch = next(iter(self.train_ds.take(1)))[0]
@@ -108,4 +91,5 @@ class BaseExperiment(ABC):
         else:
             self.train_model()
         self.test_model()
-        self.display_results()
+        if self.use_interpretable_model:
+            self.display_results()

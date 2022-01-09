@@ -6,6 +6,7 @@ import tensorflow.keras as keras
 
 from src.data.dataset_loader import load_tf_data
 from src.data.preprocessing import transform_tf, process, transform
+from src.models.mnist_classic_cnn import MnistClassicCNN
 from src.models.mnist_autoencoder import MnistAutoencoder
 from src.models.proto_net import ProtoNet
 from src.utils.image_utils import display_image
@@ -14,11 +15,16 @@ from src.utils.image_utils import display_image
 class MnistExperiment(BaseExperiment):
 
     def __init__(self, load_model: bool, batch_size=250, number_of_prototypes=15, number_of_epochs=100,
-                 disable_r1=False, disable_r2=False, dataset_name="MNIST"):
+                 disable_r1=False, disable_r2=False, use_classic_model=False, ablate=False, dataset_name="MNIST"):
         self.dataset_name = dataset_name
         self.number_of_classes = 10
-        self.model = ProtoNet(MnistAutoencoder(), number_of_prototypes, self.number_of_classes)
-        super().__init__(batch_size, number_of_prototypes, number_of_epochs, disable_r1, disable_r2, load_model)
+        if ablate:
+            disable_r1 = disable_r2 = True
+        if use_classic_model:
+            self.model = MnistClassicCNN()
+        else:
+            self.model = ProtoNet(MnistAutoencoder(), number_of_prototypes, self.number_of_classes, disable_r1, disable_r2, ablate)
+        super().__init__(batch_size, number_of_prototypes, number_of_epochs, use_classic_model, ablate, load_model)
 
     def init_datasets(self):
         train_dataset, val_dataset, test_dataset = load_tf_data(self.dataset_name, "train[:55000]"), \
@@ -37,8 +43,8 @@ class MnistExperiment(BaseExperiment):
 
 
 def main():
-    experiment = MnistExperiment(False, number_of_epochs=100, number_of_prototypes=15,
-                                 disable_r1=False, disable_r2=False, dataset_name="FashionMNIST")
+    experiment = MnistExperiment(load_model=False, number_of_epochs=5, number_of_prototypes=15, disable_r1=False,
+                                 disable_r2=False, use_classic_model=False, ablate=True, dataset_name="FashionMNIST")
     experiment.run()
     experiment.decode_sample_images()
     img = next(iter(experiment.train_ds.take(1)))[0][:1]
