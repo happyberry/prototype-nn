@@ -31,20 +31,24 @@ class MnistExperiment(BaseExperiment):
         train_dataset, val_dataset, test_dataset = load_tf_data(self.dataset_name, "train[:55000]"), \
                                                    load_tf_data(self.dataset_name, "train[55000:]"), \
                                                    load_tf_data(self.dataset_name, "test")
-        train_ds = train_dataset.shuffle(1000).map(self.preprocess_fn, num_parallel_calls=tf.data.AUTOTUNE) \
-            .batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
-        val_ds = val_dataset.map(self.preprocess_fn).batch(self.batch_size)
-        test_ds = test_dataset.map(self.preprocess_fn).batch(self.batch_size)
+        train_ds = train_dataset.shuffle(1000) \
+            .batch(self.batch_size).map(self.train_preprocess_fn, num_parallel_calls=tf.data.AUTOTUNE).prefetch(tf.data.AUTOTUNE)
+        val_ds = val_dataset.map(self.test_preprocess_fn).batch(self.batch_size)
+        test_ds = test_dataset.map(self.test_preprocess_fn).batch(self.batch_size)
         return train_ds, val_ds, test_ds
 
     @staticmethod
-    def preprocess_fn(x, y):
+    def train_preprocess_fn(x, y):
+        return process(x, y)
+
+    @staticmethod
+    def test_preprocess_fn(x, y):
         return tf.image.convert_image_dtype(x, tf.float32), y
-        #return transform_tf(x, y)
 
 
 def main():
-    experiment = MnistExperiment(load_model=True, number_of_epochs=5, number_of_prototypes=10, disable_r1=False,
+    #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    experiment = MnistExperiment(load_model=False, number_of_epochs=300, number_of_prototypes=15, disable_r1=False,
                                  disable_r2=False, use_classic_model=False, ablate=False, dataset_name="MNIST")
     experiment.run()
     img = next(iter(experiment.train_ds.take(1)))[0][:1]

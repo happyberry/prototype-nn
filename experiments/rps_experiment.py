@@ -3,17 +3,21 @@ from src.data.dataset_loader import load_tf_data
 from src.data.preprocessing import preprocess_rps_image, transform_tf
 from src.models.proto_net import ProtoNet
 from src.models.rps_autoencoder import RpsAutoencoder
+from src.models.rps_classic_cnn import RpsClassicCNN
 from src.utils.image_utils import display_image
 
 
 class RpsExperiment(BaseExperiment):
 
     def __init__(self, load_model: bool, batch_size=16, number_of_prototypes=3, number_of_epochs=100,
-                 disable_r1=False, disable_r2=False, dataset_name="RockPaperScissors"):
+                 disable_r1=False, disable_r2=False, use_classic_model=False, dataset_name="RockPaperScissors"):
         self.dataset_name = dataset_name
         self.number_of_classes = 3
-        self.model = ProtoNet(RpsAutoencoder(), number_of_prototypes, self.number_of_classes, disable_r1, disable_r2)
-        super().__init__(batch_size, number_of_prototypes, number_of_epochs, load_model=load_model)
+        if use_classic_model:
+            self.model = RpsClassicCNN()
+        else:
+            self.model = ProtoNet(RpsAutoencoder(), number_of_prototypes, self.number_of_classes, disable_r1, disable_r2)
+        super().__init__(batch_size, number_of_prototypes, number_of_epochs, use_classic_model, load_model=load_model)
 
     def init_datasets(self):
         train_dataset, val_dataset, test_dataset = load_tf_data(self.dataset_name, "train[:2300]"), \
@@ -26,8 +30,8 @@ class RpsExperiment(BaseExperiment):
 
 
 def main():
-    experiment = RpsExperiment(True, batch_size=64, number_of_epochs=20, number_of_prototypes=5,
-                                 disable_r1=False, disable_r2=False)
+    experiment = RpsExperiment(False, batch_size=64, number_of_epochs=90, number_of_prototypes=5,
+                                 disable_r1=False, disable_r2=False, use_classic_model=False)
     experiment.run()
     sample = next(iter(experiment.train_ds.take(1)))[:]
     display_image(sample[0][0].numpy())

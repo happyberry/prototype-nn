@@ -1,6 +1,7 @@
 import time
 import warnings
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import tensorflow.keras as keras
 
@@ -26,6 +27,8 @@ class BaseExperiment(ABC):
         self.use_interpretable_model = not use_classic_model and not ablate
         self.load_model = load_model
         self.class_labels = load_class_labels(self.dataset_name)
+        self.results_root = f"results/{self.dataset_name}/{self.number_of_epochs} epochs"
+        Path(self.results_root + "/images").mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
     def init_datasets(self):
@@ -48,8 +51,8 @@ class BaseExperiment(ABC):
             print(f"Train loss: {epoch_loss:.4f} | Train accuracy: {100 * float(train_acc):.2f}% | Validation accuracy: {100 * float(val_acc):.2f}%")
             self.train_acc_metric.reset_states()
             self.val_acc_metric.reset_states()
-            if epoch % 100 == 99:
-                self.model.save_weights(f"results/{self.dataset_name}/model")
+            if epoch % 300 == 299 or epoch == self.number_of_epochs - 1:
+                self.model.save_weights(f"{self.results_root}/model")
 
     def test_model(self):
         test_acc_metric = keras.metrics.SparseCategoricalAccuracy()
@@ -58,7 +61,7 @@ class BaseExperiment(ABC):
         print(f"Test accuracy: {100 * float(test_acc_metric.result()):.2f}%\n")
 
     def load_model_weights(self):
-        self.model.load_weights(f"results/{self.dataset_name}/model")
+        self.model.load_weights(f"{self.results_root}/model")
 
     def display_results(self):
         self.decode_sample_images()
@@ -67,11 +70,15 @@ class BaseExperiment(ABC):
         decoded = self.model.autoencoder.decoder(tf.reshape(self.model.prototype_layer.prototypes, desired_shape))
         weights = self.model.classification_layer.weights[0].numpy()
         print(f"Prototype layer weights:\n{weights}\n")
-        display_image(concatenate_images(pad_images(decoded)), "Decoded learnt prototypes")
+        concatenated_images, title = concatenate_images(pad_images(decoded)), "Decoded learnt prototypes"
+        display_image(concatenated_images, title)
+        save_image(concatenated_images, f"{self.results_root}/images/{title}.png")
         print("Classes closest to prototypes:")
         print(f"{self.class_labels[tf.math.argmin(self.model.classification_layer.weights[0], axis=1).numpy()]}\n")
         sample_test_image = next(iter(self.test_ds.take(1)))[0][:1]
-        display_image(sample_test_image[0], "Sample test image")
+        title = "Sample test image"
+        display_image(sample_test_image[0], title)
+        save_image(sample_test_image[0].numpy(), f"{self.results_root}/images/{title}.png")
         print("Sample test image distance to each of the prototypes:")
         print(self.model.compute_distances_to_prototypes(self.model.autoencoder.encoder(sample_test_image[:1])[1])[0].numpy())
 
@@ -80,7 +87,9 @@ class BaseExperiment(ABC):
         decoded_batch = self.model.autoencoder(image_batch)
         images_to_concat = pad_images(image_batch[:number_of_images]), pad_images(decoded_batch[:number_of_images])
         long_image = concatenate_images(tf.concat(images_to_concat, axis=1))
-        display_image(long_image, "Obrazy ze zbioru treningowego i ich rekonstrukcje z autoenkodera")
+        title = "Obrazy ze zbioru treningowego i ich rekonstrukcje z autoenkodera"
+        display_image(long_image, title)
+        save_image(long_image,  f"{self.results_root}/images/{title}.png")
 
     def show_sample_images(self, number_of_images=10):
         imgs = next(iter(self.train_ds.take(1)))[0]
