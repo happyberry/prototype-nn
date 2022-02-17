@@ -23,4 +23,7 @@ def concatenate_images(images: tf.Tensor):
 
 
 def save_image(image: np.array, path: str):
-    plt.imsave(path, image)
+    if image.shape[-1] == 1:
+        plt.imsave(path, np.concatenate([image, image, image], axis=2))
+    else:
+        plt.imsave(path, image)
